@@ -5,7 +5,12 @@ import os
 import math
 
 from sklearn import datasets
-from sklearn.datasets.samples_generator import make_circles
+
+try:
+	from sklearn.datasets.samples_generator import make_circles
+except ImportError:
+	from sklearn.datasets import make_circles
+
 from sklearn.datasets import make_blobs
 
 from sklearn.svm import SVC
@@ -59,7 +64,7 @@ class SVM_Helper():
         neg_logs =  - np.log(p)
 
         xs, xlabel = score, "Score"
-        if x_axis is not "Score":
+        if x_axis != "Score":
             xs, xlabel = p, x_axis
         
         _= ax.plot(xs, neg_logs, label="- log p")
@@ -80,7 +85,7 @@ class SVM_Helper():
         neg_logs =  -np.log(1-p)
 
         xs, xlabel = score, "Score"
-        if x_axis is not "Score":
+        if x_axis != "Score":
             xs, xlabel = p, x_axis
        
         _= ax.plot(xs, neg_logs, label="- log(1-p)")
