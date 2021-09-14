@@ -8,6 +8,7 @@ from sklearn.metrics import mean_squared_error, r2_score
 from sklearn.model_selection import cross_val_score, validation_curve
 
 import os
+import tempfile
 import functools
 
 from mpl_toolkits import mplot3d
@@ -16,10 +17,18 @@ from ipywidgets import interact, fixed
 import pdb
 
 class Charts_Helper():
-    def __init__(self, save_dir="/tmp", visible=True, **params):
+    def __init__(self, save_dir=None, visible=True, **params):
+        # Default for save_dir is the system's temp dir
+        if save_dir == None:
+            save_dir = tempfile.gettempdir()
+
         self.X, self.y = None, None
         self.save_dir = save_dir
-
+            
+        # Ensure directory exists
+        if not os.path.isdir(save_dir):
+            os.makedirs(save_dir)
+            
         self.visible = visible
 
         return
