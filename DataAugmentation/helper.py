@@ -14,17 +14,24 @@ from tensorflow.keras.utils import to_categorical
 
 import json
 
-import pdb
-
 class Helper():
+  raise_exception_on_missing_data = True
+  
   def __init__(self):
+    self.dataset =  "shipsnet.json"
+    
     # Data directory
     self.DATA_DIR = "./Data"
 
     if not os.path.isdir(self.DATA_DIR):
+      if self.raise_exception_on_missing_data:
+        raise Exception(
+          "The required data set is missing: Create a subdirectory named 'Data' in the current directory and place the data file '{f:s}' in it.".format(f=self.dataset)
+        )
+      else:
         self.DATA_DIR = "../resource/asnlib/publicdata/ships_in_satellite_images/data"
 
-    self.dataset =  "shipsnet.json"
+
 
   def getData(self):
     
@@ -51,31 +58,6 @@ class Helper():
   def modelPath(self, modelName):
       return os.path.join(".", "models", modelName)
 
-
-  def y_OHE(self, y):
-    """
-    Determine the encoding of y
-    - False if it is one dimensional (or two dimensional with final dimension of 1
-    - True if it is One Hot Encoded
-
-    Parameters
-    -----------
-    y: ndarray
-
-    Returns
-    -------
-    Bool: 
-    - True if y is OHE
-    - False otherwise
-    """
-    result = None
-    if ( (y.ndim > 1) and (y.shape[-1] >1) ):
-      result = True
-    else:
-      result = False
-
-    return result
-    
   def saveModel(self, model, modelName): 
       model_path = self.modelPath(modelName)
       
@@ -84,48 +66,27 @@ class Helper():
       except OSError:
           print("Directory {dir:s} already exists, files will be over-written.".format(dir=model_path))
           
-      # Save model JSON to disk
+      # Save JSON config to disk
       json_config = model.to_json()
       with open(os.path.join(model_path, 'config.json'), 'w') as json_file:
           json_file.write(json_config)
-
       # Save weights to disk
       model.save_weights(os.path.join(model_path, 'weights.h5'))
-
-      # Save training config
-      metrics = model.metrics_names
-      loss    = model.loss
-      if 'loss' in metrics:
-        metrics.remove('loss')
-
-      training_parms = { "metrics": metrics,
-                         "loss"   : loss
-                         }
-      
-      with open(os.path.join(model_path, 'training_parms.pkl'), 'wb') as f:
-          pickle.dump(training_parms, f)
-
       
       print("Model saved in directory {dir:s}; create an archive of this directory and submit with your assignment.".format(dir=model_path))
 
   def loadModel(self, modelName):
-    model_path = self.modelPath(modelName)
-
-    # Reload the model from the files we saved
-    with open(os.path.join(model_path, 'config.json')) as json_file:
-        json_config = json_file.read()
-
-    model = tf.keras.models.model_from_json(json_config)
-
-    # Retrieve training parameters and restore them
-    with open(os.path.join(model_path, 'training_parms.pkl'), 'rb') as f:
-        training_parms = pickle.load(f)
-        metrics, loss = ( training_parms[k] for k in ("metrics", "loss") )
-
-    model.compile(loss=loss, metrics=metrics)
-    model.load_weights(os.path.join(model_path, 'weights.h5'))
-
-    return model
+      model_path = self.modelPath(modelName)
+      
+      # Reload the model from the 2 files we saved
+      with open(os.path.join(model_path, 'config.json')) as json_file:
+          json_config = json_file.read()
+    
+      model = tf.keras.models.model_from_json(json_config)
+      model.compile(loss='categorical_crossentropy', metrics=['accuracy'])
+      model.load_weights(os.path.join(model_path, 'weights.h5'))
+      
+      return model
 
   def saveModelNonPortable(self, model, modelName): 
       model_path = self.modelPath(modelName)
@@ -154,7 +115,7 @@ class Helper():
       except OSError:
           print("Directory {dir:s} already exists, files will be over-written.".format(dir=history_path))
 
-      # Save history
+      # Save JSON config to disk
       with open(os.path.join(history_path, 'history'), 'wb') as f:
           pickle.dump(history.history, f)
 
@@ -229,44 +190,9 @@ class Helper():
 
     return history, fig, axs
 
-  def acc_key(self, history=None, model=None):
-    """
-    Parameters
-    ----------
-    model:   A Keras model object
-    history: "history" object return by "fit" method applied to a Keras model
-
-    Returns
-    -------
-    key_name: String.  The key to use in indexing into the dict contained in the history object returned by the "fit" method applied to a Keras model
-
-    You should supply only ONE of these parameters (priority given to "model")
-
-    Newer versions of Keras have changed the name of the metric that measures
-    accuracy from "acc" to "accuracy".  Either name is allowed in the "compile" statement.
-
-    The key in the history.history dictionary (returned by applying the "fit" method to the model object) will depend on the exact name of the metric supplied in the "compile" statement.
-
-    This method will return the string to use as a key in history.history by examining
-    - The model object (if given)
-    - The keys of history.history (if history is given)
-    """
-    
-    key_name = None
-    
-    if model is not None:
-      key_name = "accuracy" if "accuracy" in model.metrics_names else "acc"
-    else:
-      key_name = "accuracy" if "accuracy" in history.history.keys() else "acc"
-
-    return key_name
-
   def plotTrain(self, history, model_name="???"):
     fig, axs = plt.subplots( 1, 2, figsize=(12, 5) )
 
-    # Determine the name of the key that indexes into the accuracy metric
-    acc_string = self.acc_key(history=history)
-    
     # Plot loss
     axs[0].plot(history.history['loss'])
     axs[0].plot(history.history['val_loss'])
@@ -276,15 +202,14 @@ class Helper():
     axs[0].legend(['train', 'validation'], loc='upper left')
    
     # Plot accuracy
-    axs[1].plot(history.history[ acc_string ])
-    axs[1].plot(history.history['val_' + acc_string ])
+    axs[1].plot(history.history['accuracy'])
+    axs[1].plot(history.history['val_accuracy'])
     axs[1].set_title(model_name + " " +'model accuracy')
     axs[1].set_ylabel('accuracy')
     axs[1].set_xlabel('epoch')
     axs[1].legend(['train', 'validation'], loc='upper left')
 
     return fig, axs
-  
   def model_interpretation(self, clf):
     dim = round( clf.coef_[0].shape[-1] **0.5)
 
