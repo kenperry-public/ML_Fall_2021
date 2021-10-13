@@ -655,9 +655,20 @@ class YieldCurve_PCA():
     
     """
     def __init__(self, **params):
+        YC_PATH = os.path.join("./data", "yield_curve")
+
+        if not os.path.isdir(YC_PATH):
+            print("YieldCurve_PCA: you MUST download the data to ", YC_PATH)
+            
+        self.YC_PATH = YC_PATH
+
         return
 
-    def create_data(self, csv_file="external/MVA2-PCA/Marktzinsen_mod.csv"):
+    def create_data(self, csv_file=""):
+        if len(csv_file) == 0:
+            YC_PATH = self.YC_PATH
+            csv_file = os.path.join(YC_PATH, "Marktzinsen_mod.csv")
+        
         df = pd.read_csv(csv_file, sep=',')
 
         df['Datum'] = pd.to_datetime(df['Datum'],infer_datetime_format=True)
