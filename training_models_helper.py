@@ -23,6 +23,7 @@ from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.naive_bayes import GaussianNB
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 
+from sklearn.metrics import mean_squared_error
 
 from ipywidgets import interact, interactive, fixed, interact_manual, Image
 import ipywidgets as widgets
@@ -33,6 +34,8 @@ from matplotlib import animation
 from IPython.display import HTML
 
 import random 
+
+from scipy.optimize import minimize
 
 class TrainingModelsHelper():
     DOWNLOAD_ROOT = "https://raw.githubusercontent.com/ageron/handson-ml/master/"
@@ -124,6 +127,56 @@ class GradientDescentHelper():
         for iteration in range(n_iterations):
             gradients = 2/m * X_b.T.dot(X_b.dot(theta) - y)
             theta = theta - alpha * gradients
+
+        # Drop the singleton dimension
+        theta = theta.reshape(-1)
+        
+        return theta
+
+  
+    def minimize_loss_lr(self, X, y):
+        """
+        Fit the parameters theta of a linear model
+          y_hat = X dot theta
+
+        by
+        - Defining a loss function (exactly MSE in this example)
+        - Using a non-SGD minimzer (from scipy) to minimize the loss
+        """
+        
+        # Define a loss function for the linear model 
+        def loss_fn_lr(theta, X, y):
+            """
+            Define a loss function.  It is a function of
+            - theta: parameters of model
+            - X: features
+            - y: target
+
+            The model predicts y_hat = X dot theta
+            The error is MSE(y, y_hat)
+            """
+            
+            # Compute prediction of a linear model: y_pred = X dot theta
+            y_pred = np.matmul(X, theta)
+
+            # Compute mean squared error as loss
+            error = mean_squared_error(y, y_pred)
+
+            return(error)
+
+        # Add intercept feature to features (design matrix) X
+        X_b = np.c_[np.ones((X.shape[0], 1)), X]  # add x0 = 1 to each instance
+
+        # You must provide a starting point at which to initialize
+        # the parameter search space
+        theta_init = np.array([1]*X_b.shape[1])
+
+        result = minimize(loss_fn_lr, theta_init, args=(X_b, y),
+                  method='BFGS', options={'maxiter': 1000})
+
+        # The optimal values for the input parameters are stored
+        # in result.x
+        theta = result.x
 
         return theta
 
