@@ -107,20 +107,25 @@ class CNN_Helper():
                                  gridspec_kw={'width_ratios': [8, 1, 8]}
                                  )
 
-        fig.subplots_adjust(hspace=0.25)
+        fig.subplots_adjust(hspace=10)
 
         i = 0
         for lab, filt in filters.items():
+
             img_filt = self.apply_filt_2d(img, filt)
             _= axs[i,0].matshow(img, cmap="gray")
+            _= axs[i,0].xaxis.set_ticks_position('bottom')
+            _= axs[i,0].set_title ("input")
             
 
             _= axs[i,1].matshow(filt, cmap="gray")
-            _= axs[i,1].set_title (lab)
+            _= axs[i,1].set_title ("filter:\n" + lab)
             _= axs[i,1].xaxis.set_ticks_position('bottom')
             
             _= axs[i,2].matshow(img_filt, cmap="gray")
-
+            _= axs[i,2].xaxis.set_ticks_position('bottom')
+            _= axs[i,2].set_title ("convolution output")
+            
             i += 1
 
         fig.tight_layout()
